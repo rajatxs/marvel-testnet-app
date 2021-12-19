@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8" />
+   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+   <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+   <title>Marvel Testnet</title>
+</head>
+<body>
+   <div id="app">
+      <div v-show="loading" style="background-color: royalblue; color: white; padding: 12px;">Loading...</div>
+      <h1>Marvel Testnet</h1>
+      <p>Your address: <strong>{{ address }}</strong></p>
+      <p>Your balance: <strong>{{ balance }} MRT</strong></p>
+
+      <form @submit.prevent="transferTokens">
+         <p>
+            <label for="from">From</label>
+            <br />
+            <input type="text" name="from" placeholder="From" :value="address" readonly />
+         </p>
+
+         <p>
+            <label for="to">To</label>
+            <br />
+            <input v-model="transferOptions.to" type="text" name="to" placeholder="Address" required />
+         </p>
+         <p>
+            <label for="to">Amount</label>
+            <br />
+            <input v-model="transferOptions.amount" type="number" name="to" placeholder="0" min="1" autocomplete="off" required />
+         </p>
+         <p>
+            <button type="submit">Send</button>
+         </p>
+      </form>
+
+      <hr />
+
+      <div v-if="transactions.length === 0">No transactions</div>
+      <div v-else v-for="tx in transactions" :key="tx.hash">
+         <div><strong>From: </strong>{{ tx.from }}</div>
+         <div><strong>To: </strong>{{ tx.to }}</div>
+         <div><strong>Amount: </strong>{{ tx.amount }} MRT</div>
+         <div><strong>txHash: </strong>{{ tx.txHash }}</div>
+         <div><strong>Hash: </strong>{{ tx.hash }}</div>
+         <div><strong>Timestamp: </strong>{{ tx.timestamp }}</div>
+         <br />
+      </div>
+
+   </div>
+</body>
+<script>
+   const app = new Vue({
+      el: '#app',
+      data() {
+         return {
+            address: '',
+            balance: 0,
+            transactions: [],
+            loading: false,
+            transferOptions: {
+               to: '',
+               amount: ''
+            }
+         }
+      },
+      created() {
+         this.loading = true;
+         this.setAddress();
+      },
+      async mounted() {
+         await this.fetchBalance();
+         await this.fetchTransactions();
+         this.loading = false;
+      },
+      methods: {
+         setAddress() {
+            this.address = localStorage.getItem('ADDRESS') || '';
+
+            while(this.address.length === 0) {
+               let newAddress = prompt("Enter your address");
+               if (newAddress.length > 0) {
+                  this.address = newAddress;
+                  localStorage.setItem('ADDRESS', newAddress);
+               }
+            }
+         },
+
+         async fetchBalance() {
+            try {
+               const response = await axios.get('/balance/' + this.address);
+               this.balance = response.data.value;
+            } catch (error) {
+               alert("Failed to get account balance");
+            }
+         },
+
+         async transferTokens() {
+            const options = Object.assign({ from: this.address }, this.transferOptions);
+
+            if (options.from === options.to) {
+               alert("You can't transfer MRT to same address");
+               return;
+            }
+
+            this.loading = true;
+            try {
+               const response = await axios.post('/transfer', options);
+               alert(response.data.message);
+               await this.fetchBalance();
+               await this.fetchTransactions();
+            } catch (error) {
+               alert("Transaction failed");
+            }
+            this.loading = false;
+         },
+
+         async fetchTransactions() {
+            try {
+               const response = await axios.get('/transactions/' + this.address);
+               this.transactions = response.data.value;
+            } catch (error) {
+               alert("Failed to get transactions");
+            }
+         }
+      }
+   });
+</script>
+</html>
