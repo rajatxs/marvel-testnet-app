@@ -2,13 +2,16 @@
   "name": "marvel-network",
   "version": "1.0.0",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "node server",
     "dev": "nodemon server"
   },
   "license": "MIT",
   "dependencies": {
+    "chalk": "^5.0.0",
     "crypto-js": "^4.1.1",
-    "express": "^4.17.2"
+    "express": "^4.17.2",
+    "node-json-db": "^1.4.1"
   }
 }
