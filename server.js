@@ -1,42 +1,25 @@
-const express = require('express');
-const contract = require("./contract");
-const path = require("path");
+import express from 'express';
+import contract from "./contract.js";
+import path from "path";
+import { rootDir } from "./config.js";
+import { validate } from "./middlewares.js";
+import keyRoutes from "./routes/key.js";
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
+app.use("/key", keyRoutes);
 
 app.get('/', (req, res) => {
-   res.sendFile(path.join(__dirname, "index.html"));
+   res.sendFile(path.join(rootDir, "index.html"));
 });
 
-contract.transfer("rajat", "pruthvi", 140);
-
-app.get('/balance/:addr', (req, res) => {
-   const address = req.params.addr;
-   let balance = contract.balanceOf(address);
+app.get('/balance', validate, (req, res) => {
+   let balance = 0; //contract.balanceOf();
 
    return res.status(200).json({
       value: balance
-   });
-});
-
-app.get('/transactions/:addr', (req, res) => {
-   const address = req.params.addr;
-   let transactions = contract.transactionsOf(address);
-
-   return res.status(200).json({
-      value: transactions
-   });
-})
-
-app.post('/transfer', (req, res) => {
-   const data = req.body;
-   contract.transfer(data.from, data.to, data.amount);
-
-   return res.status(200).json({
-      message: "Transaction executed"
    });
 });
 

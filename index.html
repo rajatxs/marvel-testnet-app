@@ -10,6 +10,61 @@
 </head>
 <body>
    <div id="app">
+      <dialog id="wallet-generate-dialog" open style="width: auto; height: inherit; margin-left: 12px; margin-right: 12px;">
+         <h2>Create new wallet</h2>
+
+         <div v-if="walletCreatePrompt.actionType === 'NONE'">
+            <button @click="walletCreatePrompt.actionType = 'CREATE'">Create new one</button>
+            <button @click="walletCreatePrompt.actionType = 'IMPORT'">Import from keys</button>
+         </div>
+         <div v-else>
+            <button @click="walletCreatePrompt.actionType = 'NONE'"><strong>X</strong> Cancel</button>
+         </div>
+
+         <form v-if="walletCreatePrompt.actionType !== 'NONE'" name="wallet-key-form">
+            <p>
+               <label for="address">Address</label>
+               <br />
+               <input 
+                  v-model="walletCreatePrompt.address" 
+                  type="text" 
+                  name="address" 
+                  maxlength="128" 
+                  style="width: 80%;"
+                  :readonly="walletCreatePrompt.actionType === 'CREATE'" />
+            </p>
+            
+            <p>
+               <label for="publicKey">Public key</label>
+               <br />
+               <textarea 
+                  v-model="walletCreatePrompt.publicKey" 
+                  type="text" 
+                  name="publicKey" 
+                  rows="6" 
+                  cols="43"
+                  :readonly="walletCreatePrompt.actionType === 'CREATE'"></textarea>
+            </p>
+            
+            <p>
+               <label for="privateKey">Private key</label>
+               <br />
+               <textarea 
+                  v-model="walletCreatePrompt.privateKey" 
+                  type="text" 
+                  name="privateKey" 
+                  rows="8" 
+                  cols="43"
+                  :readonly="walletCreatePrompt.actionType === 'CREATE'"></textarea>
+            </p>
+
+            <button type="submit" style="width: 80%;">Done</button>
+         </form>
+
+         <br />
+         <br />
+       </dialog>
+
       <div v-show="loading" style="background-color: royalblue; color: white; padding: 12px;">Loading...</div>
       <h1>Marvel Testnet</h1>
       <p>Your address: <strong>{{ address }}</strong></p>
@@ -57,6 +112,13 @@
       el: '#app',
       data() {
          return {
+            walletCreatePrompt: {
+               actionType: 'NONE',
+               address: '',
+               publicKey: '',
+               privateKey: ''
+            },
+
             address: '',
             balance: 0,
             transactions: [],
@@ -67,14 +129,35 @@
             }
          }
       },
+      watch: {
+         async 'walletCreatePrompt.actionType'(newAction) {
+            switch(newAction) {
+               case 'CREATE':
+                  const keys = await this.fetchWalletKeys(); 
+                  this.walletCreatePrompt.address = keys.address;
+                  this.walletCreatePrompt.publicKey = keys.publicKey;
+                  this.walletCreatePrompt.privateKey = keys.privateKey;
+                  break;
+
+               case 'IMPORT':
+                  break;
+
+               case 'NONE':
+                  this.walletCreatePrompt.address = '';
+                  this.walletCreatePrompt.publicKey = '';
+                  this.walletCreatePrompt.privateKey = '';
+                  break;
+            }
+         }
+      },
       created() {
-         this.loading = true;
-         this.setAddress();
+         this.loading = false;
+         // this.setAddress();
       },
       async mounted() {
-         await this.fetchBalance();
-         await this.fetchTransactions();
-         this.loading = false;
+         // await this.fetchBalance();
+         // await this.fetchTransactions();
+         // this.loading = false;
       },
       methods: {
          setAddress() {
@@ -124,6 +207,15 @@
                this.transactions = response.data.value;
             } catch (error) {
                alert("Failed to get transactions");
+            }
+         },
+
+         async fetchWalletKeys() {
+            try {
+               const response = await axios.get('/key/generate');
+               return response.data.result;
+            } catch (error) {
+               alert("Failed to generate your wallet keys");
             }
          }
       }

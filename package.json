@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node server",
-    "dev": "nodemon server"
+    "dev": "nodemon server",
+    "clean": "del data\\*.json"
   },
   "license": "MIT",
   "dependencies": {
@@ -13,5 +14,8 @@
     "crypto-js": "^4.1.1",
     "express": "^4.17.2",
     "node-json-db": "^1.4.1"
+  },
+  "devDependencies": {
+    "dotenv": "^10.0.0"
   }
 }
