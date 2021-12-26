@@ -1,6 +1,6 @@
 import express from 'express';
-// import path from "path";
-// import { rootDir } from "./config.js";
+import path from "path";
+import { rootDir } from "./config.js";
 // import { validate } from "./middlewares.js";
 // import keyRoutes from "./routes/key.js";
 
@@ -11,10 +11,7 @@ app.use(express.json());
 // app.use("/key", keyRoutes);
 
 app.get('/', (req, res) => {
-   return res.json({
-      message: "It's work"
-   })
-   // res.sendFile(path.join(rootDir, "index.html"));
+   res.sendFile(path.join(rootDir, "index.html"));
 });
 
 // app.get('/balance', validate, (req, res) => {
