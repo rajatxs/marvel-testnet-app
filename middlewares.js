@@ -12,7 +12,7 @@ export function validate(req, res, next) {
    const txHash = req.header("X-Tx-Hash") || '';
    const txSign = req.header("X-Tx-Sign") || '';
 
-   if (!(publicKey.length && publicAddress.length)) {
+   if (!(publicKey && publicAddress)) {
       return res.status(400).json({
          message: "Require credentials"
       });
