@@ -21,6 +21,13 @@ app.get('/', (req, res) => {
 //       value: balance
 //    });
 // });
+app.get('/balance', (req, res) => {
+   let balance = 0; //contract.balanceOf();
+
+   return res.status(200).json({
+      value: balance
+   });
+});
 
 app.listen(port, () => {
    console.log("Server is running on port ", port);
