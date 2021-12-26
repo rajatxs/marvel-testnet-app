@@ -1,8 +1,10 @@
+import 'dotenv/config';
 import express from 'express';
 import path from "path";
 import { rootDir } from "./config.js";
 import { validate } from "./middlewares.js";
 import keyRoutes from "./routes/key.js";
+import contract from "./contract.js";
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -15,7 +17,8 @@ app.get('/', (req, res) => {
 });
 
 app.get('/balance', validate, (req, res) => {
-   let balance = 0; //contract.balanceOf();
+   // @ts-ignore
+   let balance = contract.balanceOf(req.msg.address);
 
    return res.status(200).json({
       value: balance
