@@ -10,7 +10,7 @@
 </head>
 <body>
    <div id="app">
-      <dialog id="wallet-generate-dialog" open style="width: auto; height: inherit; margin-left: 12px; margin-right: 12px;">
+      <dialog id="wallet-generate-dialog" :open="walletCreatePrompt.show" style="width: auto; height: inherit; margin-left: 12px; margin-right: 12px;">
          <h2>Create new wallet</h2>
 
          <div v-if="walletCreatePrompt.actionType === 'NONE'">
@@ -21,7 +21,7 @@
             <button @click="walletCreatePrompt.actionType = 'NONE'"><strong>X</strong> Cancel</button>
          </div>
 
-         <form v-if="walletCreatePrompt.actionType !== 'NONE'" name="wallet-key-form">
+         <form v-if="walletCreatePrompt.actionType !== 'NONE'" name="wallet-key-form" @submit.prevent="saveWalletKeys">
             <p>
                <label for="address">Address</label>
                <br />
@@ -30,8 +30,9 @@
                   type="text" 
                   name="address" 
                   maxlength="128" 
+                  required
                   style="width: 80%;"
-                  :readonly="walletCreatePrompt.actionType === 'CREATE'" />
+                  readonly />
             </p>
             
             <p>
@@ -42,6 +43,7 @@
                   type="text" 
                   name="publicKey" 
                   rows="6" 
+                  required
                   cols="43"
                   :readonly="walletCreatePrompt.actionType === 'CREATE'"></textarea>
             </p>
@@ -55,6 +57,7 @@
                   name="privateKey" 
                   rows="8" 
                   cols="43"
+                  required
                   :readonly="walletCreatePrompt.actionType === 'CREATE'"></textarea>
             </p>
 
@@ -95,24 +98,28 @@
       <hr />
 
       <div v-if="transactions.length === 0">No transactions</div>
-      <div v-else v-for="tx in transactions" :key="tx.hash">
-         <div><strong>From: </strong>{{ tx.from }}</div>
-         <div><strong>To: </strong>{{ tx.to }}</div>
-         <div><strong>Amount: </strong>{{ tx.amount }} MRT</div>
-         <div><strong>txHash: </strong>{{ tx.txHash }}</div>
-         <div><strong>Hash: </strong>{{ tx.hash }}</div>
-         <div><strong>Timestamp: </strong>{{ tx.timestamp }}</div>
-         <br />
-      </div>
+      <ul v-else>
+         <li v-for="tx in transactions" :key="tx.hash">
+            <div><strong>From: </strong>{{ tx.transaction.from }}</div>
+            <div><strong>To: </strong>{{ tx.transaction.to }}</div>
+            <div><strong>Amount: </strong>{{ tx.transaction.amount }} MRT</div>
+            <div><strong>txHash: </strong>{{ tx.transaction.txHash }}</div>
+            <div><strong>Hash: </strong>{{ tx.hash }}</div>
+            <div><strong>Timestamp: </strong>{{ tx.timestamp }}</div>
+            <br />
+         </li>
+      </ul>
 
    </div>
 </body>
 <script>
+
    const app = new Vue({
       el: '#app',
       data() {
          return {
             walletCreatePrompt: {
+               show: false,
                actionType: 'NONE',
                address: '',
                publicKey: '',
@@ -120,6 +127,7 @@
             },
 
             address: '',
+            publicKey: '',
             balance: 0,
             transactions: [],
             loading: false,
@@ -130,6 +138,14 @@
          }
       },
       watch: {
+         async address(newAccount) {
+            if (newAccount) {
+               this.loading = true;
+               await this.fetchBalance();
+               await this.fetchTransactions();
+               this.loading = false;
+            }
+         },
          async 'walletCreatePrompt.actionType'(newAction) {
             switch(newAction) {
                case 'CREATE':
@@ -150,52 +166,70 @@
             }
          }
       },
+      computed: {
+         privateKey() {
+            return localStorage.get('PRIVATE_KEYS') || '';
+         },
+         http() {
+            return axios.create({
+               headers: {
+                  'X-Public-Key': btoa(localStorage.getItem('PUBLIC_KEY')),
+                  'X-Public-Address': this.address
+               }
+            });
+         }
+      },
       created() {
          this.loading = false;
-         // this.setAddress();
+         this.getWalletKeys();
       },
       async mounted() {
-         // await this.fetchBalance();
-         // await this.fetchTransactions();
-         // this.loading = false;
       },
       methods: {
-         setAddress() {
+         getWalletKeys() {
             this.address = localStorage.getItem('ADDRESS') || '';
 
-            while(this.address.length === 0) {
-               let newAddress = prompt("Enter your address");
-               if (newAddress.length > 0) {
-                  this.address = newAddress;
-                  localStorage.setItem('ADDRESS', newAddress);
-               }
+            if (this.address.length === 0) {
+               this.walletCreatePrompt.show = true;
             }
+         },
+         saveWalletKeys() {
+            localStorage.setItem('ADDRESS', this.walletCreatePrompt.address);
+            localStorage.setItem('PUBLIC_KEY', this.walletCreatePrompt.publicKey);
+            localStorage.setItem('PRIVATE_KEY', this.walletCreatePrompt.privateKey);
+            this.walletCreatePrompt.show = false;
          },
 
          async fetchBalance() {
             try {
-               const response = await axios.get('/balance/' + this.address);
+               const response = await this.http.get('/balance');
                this.balance = response.data.value;
             } catch (error) {
+               console.log(error);
                alert("Failed to get account balance");
             }
          },
 
          async transferTokens() {
-            const options = Object.assign({ from: this.address }, this.transferOptions);
+            const data = Object.assign({ type: 'TRANSFER', privateKey: encodeURI(localStorage.getItem('PRIVATE_KEY')) }, this.transferOptions);
 
-            if (options.from === options.to) {
+            if (this.address === data.to) {
                alert("You can't transfer MRT to same address");
                return;
             }
 
             this.loading = true;
-            try {
-               const response = await axios.post('/transfer', options);
+
+            try { 
+               const response = await this.http.post('/tx/execute', data);
+
+               console.log("TRANSFER", response);
+
                alert(response.data.message);
                await this.fetchBalance();
                await this.fetchTransactions();
             } catch (error) {
+               console.log(error);
                alert("Transaction failed");
             }
             this.loading = false;
@@ -203,17 +237,26 @@
 
          async fetchTransactions() {
             try {
-               const response = await axios.get('/transactions/' + this.address);
-               this.transactions = response.data.value;
+               const response = await this.http.get('/tx');
+               this.transactions = response.data;
             } catch (error) {
                alert("Failed to get transactions");
             }
          },
 
          async fetchWalletKeys() {
+            let keys, address;
+
             try {
-               const response = await axios.get('/key/generate');
-               return response.data.result;
+               const keyGenResponse = await axios.get('/key/generate');
+               keys = keyGenResponse.data.keys;
+
+               const addressGenResponse = await axios.post('/key/address', {
+                  publicKey: keys.publicKey
+               });
+               address = addressGenResponse.data.address;
+
+               return Object.assign({ address }, keys);
             } catch (error) {
                alert("Failed to generate your wallet keys");
             }

@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "main": "server.js",
   "type": "module",
+  "author": {
+    "name": "Rajat Sharma",
+    "email": "rxx175@gmail.com",
+    "url": "https://github.com/rajatxs"
+  },
   "scripts": {
     "start": "node server",
     "dev": "nodemon server",
@@ -11,7 +16,7 @@
   "license": "MIT",
   "dependencies": {
     "chalk": "^5.0.0",
-    "crypto-js": "^4.1.1",
+    "cors": "^2.8.5",
     "dotenv": "^10.0.0",
     "express": "^4.17.2",
     "node-json-db": "^1.4.1"

@@ -25,7 +25,6 @@ export function validate(req, res, next) {
    }
 
    Reflect.set(req, 'msg', {});
-
    Reflect.set(req['msg'], 'address', publicAddress);
    Reflect.set(req['msg'], 'publicKey', publicKey);
    Reflect.set(req['msg'], 'txHash', txHash);

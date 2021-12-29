@@ -3,12 +3,36 @@ import crypto from "crypto";
 /** Generate account keys */
 export function generateKeyPair() {
    const keypair = crypto.generateKeyPairSync("rsa", {
-      modulusLength: 1024,
-      publicKeyEncoding: { type: "spki", format: "pem" },
-      privateKeyEncoding: { type: "pkcs8", format: "pem" },
+      modulusLength: 512,
+      publicKeyEncoding: { type: "spki", format: "der" },
+      privateKeyEncoding: { type: "pkcs8", format: "der" },
    });
 
    return keypair;
+}
+
+/**
+ * Convert to private key object
+ * @param {string} privateKey 
+ */
+export function toPrivateKey(privateKey) {
+   return crypto.createPrivateKey({
+      key: Buffer.from(privateKey, 'hex'),
+      format: 'der',
+      type: 'pkcs8'
+   });
+}
+
+/**
+ * Convert to public key object
+ * @param {string} publicKey 
+ */
+export function toPublicKey(publicKey) {
+   return crypto.createPublicKey({
+      key: Buffer.from(publicKey, 'hex'),
+      format: 'der',
+      type: 'spki'
+   });
 }
 
 /**
@@ -35,24 +59,24 @@ export function generateSHA256Hash(data) {
 /**
  * Create SHA256 signature
  * @param {string} hash 
- * @param {string} privateKey 
+ * @param {import('crypto').KeyObject} privateKey 
  */
 export function createSHA256Signature(hash, privateKey) {
    const signer = crypto.createSign("SHA256");
    signer.update(hash).end();
 
-   return signer.sign(privateKey);
+   return signer.sign(privateKey, 'hex');
 }
 
 /**
  * Verify SHA256 hash with public key and signature
  * @param {string} hash 
- * @param {string} publicKey 
- * @param {any} signature 
+ * @param {import('crypto').KeyObject} publicKey 
+ * @param {string} signature 
  */
 export function verifySHA256Hash(hash, publicKey, signature) {
    const verifier = crypto.createVerify("SHA256");
    verifier.update(hash);
 
-   return verifier.verify(publicKey, signature);
+   return verifier.verify(publicKey, Buffer.from(signature, 'hex'));
 }
